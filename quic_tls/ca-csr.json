@@ -1,0 +1,12 @@
+{
+  "CN": "OpenHello CA X3",
+  "key": {
+    "algo": "ecdsa",
+    "size": 256
+  },
+  "names": [
+    {
+      "O": "OpenHello Group"
+    }
+  ]
+}
