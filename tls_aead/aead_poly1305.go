@@ -1,4 +1,3 @@
-// https://github.com/SimonWaldherr/golang-examples/blob/master/advanced/aesgcm.go
 package main
 
 import (
