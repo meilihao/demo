@@ -1,4 +1,6 @@
 // see https://github.com/cloudflare/tls-tris/blob/ad86d61c4229dd9ecb5ddf89e4b4a4794b31e415/13.go
+// https://boringssl.googlesource.com/boringssl/+/master/ssl/test/runner/key_agreement.go
+// https://blog.yumaojun.net/2017/02/19/go-crypto/
 package main
 
 import (
