@@ -1,6 +1,8 @@
 // tls 1.3 key keyexchange, no use clinet/server's random
 // https://medium.com/@oyrxx/tls-key-exchange-aed230aa114e
 // https://blog.csdn.net/mrpre/article/details/80056618
+//
+// HKDF是基于HMAC的HKDF(密钥派生函数).
 package main
 
 import (
@@ -93,6 +95,7 @@ func hkdfExpandLabel(hash crypto.Hash, secret, hashValue []byte, label string, L
 	return hkdfExpand(hash, secret, hkdfLabel, L)
 }
 
+// 通过一系列的哈希运算将密钥扩展到我们需要的长度
 // https://github.com/cloudflare/tls-tris/blob/master/hkdf.go
 func hkdfExpand(hash crypto.Hash, prk, info []byte, l int) []byte {
 	var (
@@ -121,6 +124,7 @@ func hkdfExpand(hash crypto.Hash, prk, info []byte, l int) []byte {
 	return res
 }
 
+// 将用户输入的密钥尽量的伪随机化
 func hkdfExtract(hash crypto.Hash, secret, salt []byte) []byte {
 	if salt == nil {
 		salt = make([]byte, hash.Size())
