@@ -1,10 +1,13 @@
 // see https://github.com/cloudflare/tls-tris/blob/ad86d61c4229dd9ecb5ddf89e4b4a4794b31e415/13.go
+// https://boringssl.googlesource.com/boringssl/+/master/ssl/test/runner/key_agreement.go
+// https://blog.yumaojun.net/2017/02/19/go-crypto/
 package main
 
 import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"reflect"
 
 	"golang.org/x/crypto/curve25519"
 )
@@ -28,16 +31,23 @@ type keyShare struct {
 }
 
 func main() {
-	clientKS := keyShare{group: X25519, data: []byte{0x2e, 0x3c, 0xc9, 0xa6, 0xe9, 0x44, 0x0f, 0x58, 0x94, 0x2b, 0x90, 0x73, 0x2e, 0x48, 0xde, 0x20, 0xda, 0xed, 0x7c, 0x6f, 0xe8, 0xac, 0x78, 0x8a, 0xa6, 0x20, 0x25, 0xc4, 0x99, 0xa6, 0x42, 0x4e}}
-	privateKey, serverKS, err := generateKeyShare(X25519)
+	clientPrivateKey, clientKS, err := generateKeyShare(X25519)
 	CheckErr(err)
 
-	ecdheSecret := deriveECDHESecret(clientKS, privateKey)
+	serverPrivateKey, serverKS, err := generateKeyShare(X25519)
+	CheckErr(err)
+
+	ecdheSecret := deriveECDHESecret(clientKS, serverPrivateKey)
 	if ecdheSecret == nil {
+		panic("tls: bad ECDHE server share")
+	}
+
+	ecdheSecret2 := deriveECDHESecret(serverKS, clientPrivateKey)
+	if ecdheSecret2 == nil {
 		panic("tls: bad ECDHE client share")
 	}
 
-	fmt.Println(serverKS, ecdheSecret)
+	fmt.Println(reflect.DeepEqual(ecdheSecret, ecdheSecret2))
 }
 
 // GenerateKey 基于curve25519椭圆曲线算法生成密钥对
