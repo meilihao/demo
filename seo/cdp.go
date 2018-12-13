@@ -2,6 +2,7 @@
 // 参考了[rendora](github.com/rendora/rendora)的实现和[React 服务端渲染方案完美的解决方案](https://juejin.im/post/5bf3cb59f265da612b1336e2)思路
 // 还是有报错, 原因不明
 // 不推荐使用:  Chrome DevTools Protocol的api难用
+// 推荐使用[rendertron](https://github.com/GoogleChrome/rendertron)或[puppeteer](https://github.com/GoogleChrome/puppeteer),两者均由Google Chrome 官方团队提供.
 package main
 
 import (
