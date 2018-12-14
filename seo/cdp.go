@@ -3,6 +3,7 @@
 // 还是有报错, 原因不明
 // 不推荐使用:  Chrome DevTools Protocol的api难用
 // 推荐使用[rendertron](https://github.com/GoogleChrome/rendertron)或[puppeteer](https://github.com/GoogleChrome/puppeteer),两者均由Google Chrome 官方团队提供.
+// [How to disable images and CSS in Puppeteer to speed up web scraping](https://www.scrapehero.com/how-to-increase-web-scraping-speed-using-puppeteer/)
 package main
 
 import (
