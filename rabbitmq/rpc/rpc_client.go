@@ -40,7 +40,7 @@ func main() {
 	//defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		"",    // name
+		"",    // name  // 此时自动生成唯一的queue name
 		false, // durable
 		false, // delete when usused
 		true,  // exclusive
