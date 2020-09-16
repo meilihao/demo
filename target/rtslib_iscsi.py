@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# from https://gist.github.com/Thingee/9b3605bfcea928cb0183
 from rtslib import *
 
 # Setup an IBLOCK backstore
