@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # from https://gist.github.com/Thingee/9b3605bfcea928cb0183
+# other: https://blog.csdn.net/scaleqiao/article/details/46744891?locationNum=5&fps=1
 from rtslib import *
 
 # Setup an IBLOCK backstore
