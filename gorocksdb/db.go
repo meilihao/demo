@@ -244,6 +244,15 @@ func OpenDB() (*gorocksdb.DB, error) {
 	} else {
 		log.Println("OPEN DB success", db)
 	}
+	
+	go func(){
+		for {
+			s:=options.GetStatisticsString()
+			fmt.Println(s)
+		
+			time.Sleep(60 * time.Second)
+		}
+	}()
 
 	return db, nil
 }
