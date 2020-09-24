@@ -29,11 +29,11 @@ func main() {
 
 	writeOptions := gorocksdb.NewDefaultWriteOptions()
 	writeOptions.SetSync(true)
-	defer readOptions.Destroy()
+	defer writeOptions.Destroy()
 
 	err = db.Put(writeOptions, []byte("cf-0"), nil)
 	log.Println(err)
-	
+
 	err = db.Put(writeOptions, []byte("cf-1"), []byte(""))
 	log.Println(err)
 
