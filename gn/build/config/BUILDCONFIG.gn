@@ -1,0 +1,28 @@
+# from https://gn.googlesource.com/gn/+/refs/heads/master/examples/simple_build/build/BUILDCONFIG.gn
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (target_os == "") {
+  target_os = host_os
+}
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+if (current_os == "") {
+  current_os = target_os
+}
+if (current_cpu == "") {
+  current_cpu = target_cpu
+}
+
+is_linux = host_os == "linux" && current_os == "linux" && target_os == "linux"
+is_mac = host_os == "mac" && current_os == "mac" && target_os == "mac"
+
+# gn gen时打印
+print(host_os, host_cpu)
+print(current_os, current_cpu)
+print(is_linux, is_mac)
+
+# 默认使用 build/toolchains/BUILD.gn 里面定义的 gcc toolchain
+set_default_toolchain("//build/toolchain:gcc")
