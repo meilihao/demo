@@ -1,4 +1,5 @@
 # OpenTelemetry
+exporter is stdout
 
 ## examples
 ### single
