@@ -84,6 +84,7 @@ func main() {
 
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
+    // <namespace>_an_important_metric{labelA="chocolate",labelB="raspberry",labelC="vanilla"} 2
 	commonLabels := []label.KeyValue{
 		label.String("labelA", "chocolate"),
 		label.String("labelB", "raspberry"),
