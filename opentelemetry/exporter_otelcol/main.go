@@ -10,42 +10,49 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
 func initProvider() func() {
+	ctx := context.Background()
 
 	// If the OpenTelemetry Collector is running on a local cluster (minikube or
 	// microk8s), it should be accessible through the NodePort service at the
-	// `localhost:30080` address. Otherwise, replace `localhost` with the
-	// address of your cluster. If you run the app inside k8s, then you can
+	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
+	// endpoint of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
-	exp, err := otlp.NewExporter(
+	driver := otlp.NewGRPCDriver(
 		otlp.WithInsecure(),
-		otlp.WithAddress("openhello.net:55680"),
+		otlp.WithEndpoint("openhello.net:55680"),
 		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
 	)
+	exp, err := otlp.NewExporter(ctx, driver)
 	handleErr(err, "failed to create exporter")
+
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			// the service name used to display traces in backends
+			semconv.ServiceNameKey.String("test-service"),
+		),
+	)
+	handleErr(err, "failed to create resource")
 
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithResource(resource.New(
-			// the service name used to display traces in backends
-			semconv.ServiceNameKey.String("test-service"),
-		)),
+		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
@@ -59,32 +66,33 @@ func initProvider() func() {
 	)
 
 	// set global propagator to tracecontext (the default is no-op).
-	global.SetTextMapPropagator(propagators.TraceContext{})
-	global.SetTracerProvider(tracerProvider)
-	global.SetMeterProvider(pusher.MeterProvider())
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	otel.SetTracerProvider(tracerProvider)
+	otel.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()
 
 	return func() {
-		bsp.Shutdown() // shutdown the processor
-		handleErr(exp.Shutdown(context.Background()), "failed to stop exporter")
+		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown provider")
+		handleErr(exp.Shutdown(ctx), "failed to stop exporter")
 		pusher.Stop() // pushes any last exports to the receiver
 	}
 }
 
 func main() {
+	log.SetFlags(log.Llongfile | log.LstdFlags)
 	log.Printf("Waiting for connection...")
 
 	shutdown := initProvider()
 	defer shutdown()
 
-    log.Println("provider init done")
+	log.Println("provider init done")
 
-	tracer := global.Tracer("test-tracer")
-	meter := global.Meter("test-meter")
+	tracer := otel.Tracer("test-tracer")
+	meter := otel.Meter("test-meter")
 
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
-    // <namespace>_an_important_metric{labelA="chocolate",labelB="raspberry",labelC="vanilla"} 2
+	// <namespace>_an_important_metric{labelA="chocolate",labelB="raspberry",labelC="vanilla"} 2
 	commonLabels := []label.KeyValue{
 		label.String("labelA", "chocolate"),
 		label.String("labelB", "raspberry"),
@@ -103,7 +111,7 @@ func main() {
 	ctx, span := tracer.Start(
 		context.Background(),
 		"CollectorExporter-Example",
-		otel.WithAttributes(commonLabels...))
+		trace.WithAttributes(commonLabels...))
 	defer span.End()
 	for i := 0; i < 2; i++ {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
