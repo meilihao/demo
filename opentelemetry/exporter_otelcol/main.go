@@ -1,4 +1,6 @@
 // from https://github.com/open-telemetry/opentelemetry-go/blob/master/example/otel-collector/main.go
+// see [opentelemetry-java/QUICKSTART.md](https://github.com/open-telemetry/opentelemetry-java/blob/master/QUICKSTART.md)
+// [Documentation / Go / Getting Started](https://opentelemetry.io/docs/go/getting-started/)
 package main
 
 import (
@@ -7,9 +9,11 @@ import (
 	"log"
 	"time"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
@@ -21,6 +25,11 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
+)
+
+var (
+	// for no trace and no metric
+	enableTelemetry = true
 )
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
@@ -49,11 +58,13 @@ func initProvider() func() {
 	)
 	handleErr(err, "failed to create resource")
 
+	logger, _ := zap.NewProduction()
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithSpanProcessor(NewLogSpanProcessor(logger)),
 	)
 
 	pusher := push.New(
@@ -67,6 +78,7 @@ func initProvider() func() {
 
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
+	// set global TracerProvider (the default is noopTracerProvider).
 	otel.SetTracerProvider(tracerProvider)
 	otel.SetMeterProvider(pusher.MeterProvider())
 	pusher.Start()
@@ -82,8 +94,10 @@ func main() {
 	log.SetFlags(log.Llongfile | log.LstdFlags)
 	log.Printf("Waiting for connection...")
 
-	shutdown := initProvider()
-	defer shutdown()
+	if enableTelemetry {
+		shutdown := initProvider()
+		defer shutdown()
+	}
 
 	log.Println("provider init done")
 
@@ -117,6 +131,12 @@ func main() {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 		valuerecorder.Add(ctx, 1.0)
+
+		iSpan.SetStatus(codes.Error, "error")
+		iSpan.SetAttributes(label.Bool("is_done", true))
+
+		// equal opentracing's span.LogFields
+		iSpan.AddEvent("failed", trace.WithAttributes(label.String("reason", "test")))
 
 		<-time.After(time.Second)
 		iSpan.End()
