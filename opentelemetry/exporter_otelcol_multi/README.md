@@ -1,9 +1,9 @@
 # Multi Services
-- [example from "Distributed Tracing with OpenTelemetry — Part 2"](https://levelup.gitconnected.com/distributed-tracing-with-opentelemetry-part-2-cc5a9a8aa88c)
+- [example from "Distributed Tracing with OpenTelemetry — Part 2](https://levelup.gitconnected.com/distributed-tracing-with-opentelemetry-part-2-cc5a9a8aa88c)
 
 This sample application shows how to implement distributed trancing using OpenTelemetry in grpc and http by golang.
 
-![arch](/misc/1nCd2RjWGBqrWj7HEiKkosQ.png)
+![arch](/opentelemetry/exporter_otelcol_multi/misc/1nCd2RjWGBqrWj7HEiKkosQ.png)
 
 This case is expand from [exporter_otelcol](/opentelemetry/exporter_otelcol) and [other examples](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/master/instrumentation)
 
