@@ -84,9 +84,9 @@ func initProvider() func() {
 	pusher.Start()
 
 	return func() {
+		pusher.Stop() // pushes any last exports to the receiver. it may report "context canceled"/"rpc error: code = Canceled desc = grpc: the client connection is closing", so put it first
 		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown provider")
 		handleErr(exp.Shutdown(ctx), "failed to stop exporter")
-		pusher.Stop() // pushes any last exports to the receiver
 	}
 }
 
