@@ -69,7 +69,8 @@ func exportKVs(sctx itrace.SpanContext, e exporttrace.Event) []zap.Field {
 func (lsp *LogSpanProcessor) Shutdown(ctx context.Context) error {
 	var err error
 	lsp.stopOnce.Do(func() {
-		err = lsp.logger.Sync()
+		// [Sync on linux: /dev/stdout: invalid argument](https://github.com/uber-go/zap/issues/772) is the console driver does not support fsync, hence the errors.
+		_ = lsp.logger.Sync()
 	})
 	return err
 }
