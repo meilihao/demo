@@ -1,0 +1,3 @@
+pkg/services/client/client
+pkg/services/weather/weather
+pkg/services/temperature/temperature
