@@ -4,6 +4,7 @@
 This sample application shows how to implement distributed trancing using OpenTelemetry in grpc and http by golang.
 
 ![arch](/opentelemetry/exporter_otelcol_multi/misc/1nCd2RjWGBqrWj7HEiKkosQ.png)
+![jaeger result with http detail](/opentelemetry/exporter_otelcol_multi/misc/20210106154958.png)
 
 This case is expand from [exporter_otelcol](/opentelemetry/exporter_otelcol) and [other examples](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/master/instrumentation)
 
