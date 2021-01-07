@@ -83,10 +83,13 @@ func InitOTEL(endpoint, serviceName string) (func(), error) {
 	pusher.Start()
 
 	return func() {
-		pusher.Stop() // pushes any last exports to the receiver
+		// Shutdown will flush any remaining spans.
 		if err := tracerProvider.Shutdown(ctx); err != nil {
 			logger.Error(err.Error(), zap.String("reason", "failed to shutdown provider"))
 		}
+
+		// Push any last metric events to the exporter.
+		pusher.Stop()
 		if err := exp.Shutdown(ctx); err != nil {
 			logger.Error(err.Error(), zap.String("reason", "failed to stop exporter"))
 		}
