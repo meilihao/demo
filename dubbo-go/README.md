@@ -1,4 +1,7 @@
 # readme(未完成, 依赖难弄, 待dubbo-go v3.0发布后再弄)
+参考:
+- [无缝连接 dubbo-go 与 gRPC](https://juejin.cn/post/6844904120919261197)
+
 dubbo-go 1.5.5
 
 example base [dubbo-samples/golang](https://github.com/dubbogo/dubbo-samples/blob/master/golang):
