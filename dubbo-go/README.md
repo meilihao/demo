@@ -33,7 +33,7 @@ git -C "$(go env GOPATH)"/src/github.com/golang/protobuf checkout $GIT_TAG
 go install github.com/golang/protobuf/protoc-gen-go
 ```
 
-### undefined: balancer.PickOptions 和 undefined: balancer.PickOptions
+### undefined: balancer.PickOptions 和 undefined: balancer.PickOptions / google.golang.org/grpc/naming: module google.golang.org/grpc@latest found (v1.35.0), but does not contain package google.golang.org/grpc/naming
 参考:
 - [使用 etcd 和 grpc 遇到的版本冲突的那些事儿](https://learnku.com/articles/43758)
 
