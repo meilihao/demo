@@ -13,9 +13,10 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -36,10 +37,10 @@ func InitOTEL(endpoint, serviceName string) (func(), error) {
 	// `localhost:30080` endpoint. Otherwise, replace `localhost` with the
 	// endpoint of your cluster. If you run the app inside k8s, then you can
 	// probably connect directly to the service through dns
-	driver := otlp.NewGRPCDriver(
-		otlp.WithInsecure(),
-		otlp.WithEndpoint(endpoint),
-		otlp.WithGRPCDialOption(grpc.WithBlock()), // useful for testing
+	driver := otlpgrpc.NewDriver(
+		otlpgrpc.WithInsecure(),
+		otlpgrpc.WithEndpoint(endpoint),
+		otlpgrpc.WithDialOption(grpc.WithBlock()), // useful for testing
 	)
 	exp, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
@@ -65,22 +66,23 @@ func InitOTEL(endpoint, serviceName string) (func(), error) {
 		sdktrace.WithSpanProcessor(NewLogSpanProcessor(logger)),
 	)
 
+	cont := controller.New(
+		processor.New(
+			simple.NewWithExactDistribution(),
+			exp,
+		),
+		controller.WithPusher(exp),
+		controller.WithCollectPeriod(2*time.Second),
+	)
+
 	// set global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	// set global TracerProvider (the default is noopTracerProvider).
 	otel.SetTracerProvider(tracerProvider)
-
-	pusher := push.New(
-		basic.New(
-			simple.NewWithExactDistribution(),
-			exp,
-		),
-		exp,
-		push.WithPeriod(2*time.Second),
-	)
-
-	otel.SetMeterProvider(pusher.MeterProvider())
-	pusher.Start()
+	otel.SetMeterProvider(cont.MeterProvider())
+	if err = cont.Start(context.Background()); err != nil {
+		return nil, errors.Wrap(err, "failed to start controller")
+	}
 
 	return func() {
 		// Shutdown will flush any remaining spans.
@@ -89,8 +91,7 @@ func InitOTEL(endpoint, serviceName string) (func(), error) {
 		}
 
 		// Push any last metric events to the exporter.
-		pusher.Stop()
-		if err := exp.Shutdown(ctx); err != nil {
+		if err := cont.Stop(context.Background()); err != nil {
 			logger.Error(err.Error(), zap.String("reason", "failed to stop exporter"))
 		}
 	}, nil
