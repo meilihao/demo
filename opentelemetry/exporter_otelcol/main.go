@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel"
@@ -31,7 +32,10 @@ import (
 var (
 	// for no trace and no metric
 	enableTelemetry = true
+	logger          *zap.Logger
 )
+
+type loggerKey struct{}
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
@@ -59,13 +63,26 @@ func initProvider() func() {
 	)
 	handleErr(err, "failed to create resource")
 
-	logger, _ := zap.NewProduction()
+	atom := zap.NewAtomicLevelAt(zap.DebugLevel)
+	logger, _ = zap.Config{
+		Level:       atom,
+		Development: false,
+		Sampling: &zap.SamplingConfig{
+			Initial:    100,
+			Thereafter: 100,
+		},
+		Encoding:         "json",
+		EncoderConfig:    zap.NewProductionEncoderConfig(),
+		OutputPaths:      []string{"stderr"},
+		ErrorOutputPaths: []string{"stderr"},
+	}.Build(zap.AddCallerSkip(1))
+
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(bsp),
-		sdktrace.WithSpanProcessor(NewLogSpanProcessor(logger)),
+		//sdktrace.WithSpanProcessor(NewLogSpanProcessor(logger)), //废弃, 使用SpanLog代替
 	)
 
 	cont := controller.New(
@@ -125,13 +142,14 @@ func main() {
 	defer valuerecorder.Unbind()
 
 	// work begins
+	baseCtx := context.WithValue(context.Background(), loggerKey{}, logger)
 	ctx, span := tracer.Start(
-		context.Background(),
+		baseCtx,
 		"CollectorExporter-Example",
 		trace.WithAttributes(commonLabels...))
 	defer span.End()
 	for i := 0; i < 2; i++ {
-		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
+		iCtx, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)
 		valuerecorder.Add(ctx, 1.0)
 
@@ -140,6 +158,9 @@ func main() {
 
 		// equal opentracing's span.LogFields
 		iSpan.AddEvent("failed", trace.WithAttributes(label.String("reason", "test")))
+		SpanLog(iCtx, iSpan, zap.DebugLevel, "debug log", label.String("reason", "test"))
+		SpanLog(iCtx, iSpan, zap.InfoLevel, "info log", label.String("reason", "test"))
+		SpanLog(iCtx, iSpan, zap.InfoLevel, "test")
 
 		<-time.After(time.Second)
 		iSpan.End()
@@ -151,5 +172,38 @@ func main() {
 func handleErr(err error, message string) {
 	if err != nil {
 		log.Fatalf("%s: %v", message, err)
+	}
+}
+
+func SpanLog(ctx context.Context, span trace.Span, l zapcore.Level, msg string, kv ...label.KeyValue) {
+	var logger *zap.Logger
+	if tmp := ctx.Value(loggerKey{}); tmp == nil {
+		return
+	} else {
+		logger = tmp.(*zap.Logger)
+	}
+
+	if ce := logger.Check(l, msg); ce != nil {
+		sctx := span.SpanContext()
+
+		fs := make([]zap.Field, 0, len(kv)+2)
+		fs = append(fs, zap.String("trace_id", sctx.TraceID.String()))
+		fs = append(fs, zap.String("span_id", sctx.SpanID.String()))
+
+		if len(kv) > 0 {
+			for _, attr := range kv {
+				switch attr.Value.Type() {
+				case label.STRING:
+					fs = append(fs, zap.String(string(attr.Key), attr.Value.AsString()))
+				default:
+					fs = append(fs, zap.Any(string(attr.Key), attr.Value))
+				}
+			}
+		}
+
+		ce.Write(fs...)
+
+		kv = append(kv, label.String("level", l.String()))
+		span.AddEvent(msg, trace.WithAttributes(kv...))
 	}
 }
