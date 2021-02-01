@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"math"
 	"os"
 	"time"
 
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
-	"go.etcd.io/etcd/clientv3"
 )
 
 type MutexV2 struct {
@@ -17,7 +19,7 @@ type MutexV2 struct {
 	value  string // The identity of the caller
 	ttl    int
 	client *clientv3.Client
-	s      *concurrency.Session
+	s      *concurrency.Session // 会话表示在客户端的生存期内保持活动的租约
 	mutex  *concurrency.Mutex
 	logger io.Writer
 }
@@ -55,13 +57,19 @@ func New2(key string, ttl int, endpoints []string) (*MutexV2, error) {
 
 	m.s, err = concurrency.NewSession(cli, concurrency.WithTTL(ttl))
 	if err != nil {
+		m.close()
+
 		return nil, err
 	}
 
 	m.mutex = concurrency.NewMutex(m.s, m.key)
-	if err = m.mutex.Lock(context.TODO()); err != nil {
+	if err = m.mutex.TryLock(context.TODO()); err != nil { // 使用Lock()时, 假设m1已持有锁, m2调用Lock()时会阻塞, 直到m1释放锁
+		m.close()
+
 		return nil, err
 	}
+
+	log.Printf("locked %s\n", m.value)
 
 	return m, nil
 }
@@ -83,5 +91,36 @@ func (m *MutexV2) Unlock() (err error) {
 		return err
 	}
 
+	log.Printf("unlock %s\n", m.value)
+
 	return nil
+}
+
+// NewWithRetry2 trylock with timeout
+// n=-1, trylock forever; otherwise trylock n times, if failed, sleep 1s, then try again
+func NewWithRetry2(key string, ttl int, endpoints []string, n int64) (*MutexV2, error) {
+	var l *MutexV2
+	var err error
+
+	i := n
+	if i == -1 {
+		i = math.MaxInt32
+	}
+	for i > 0 {
+		// log.Printf("Trying to create a node : key=%v\n", key)
+		l, err = New2(key, ttl, endpoints)
+		log.Printf("%+v\n", err)
+		if err == nil {
+			return l, nil
+		}
+
+		if err != concurrency.ErrLocked {
+			return nil, err
+		}
+
+		time.Sleep(time.Second)
+		i--
+	}
+
+	return nil, &LockTimeoutError{Timeout: n}
 }

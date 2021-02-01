@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"go.etcd.io/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 const (
@@ -156,9 +156,9 @@ func (m *Mutex) lock() (err error) {
 
 	// txn事务：if else then
 	txn := clientv3.NewKV(m.client).Txn(context.TODO())
-	txn.If(clientv3.Compare(clientv3.CreateRevision(m.key), "=", 0)).
-		Then(clientv3.OpPut(m.key, m.value, clientv3.WithLease(m.leaseID))).
-		Else(clientv3.OpGet(m.key)) // OpGet后TxnResponse才包含Responses
+	txn.If(clientv3.Compare(clientv3.CreateRevision(m.key), "=", 0)). // 比较key的revision为0(0标示没有key)
+										Then(clientv3.OpPut(m.key, m.value, clientv3.WithLease(m.leaseID))).
+										Else(clientv3.OpGet(m.key)) // OpGet后TxnResponse才包含Responses
 
 	var resp *clientv3.TxnResponse
 	resp, err = txn.Commit()
@@ -183,7 +183,7 @@ func (m *Mutex) Unlock() (err error) {
 	defer m.close()
 
 	var resp *clientv3.LeaseRevokeResponse
-	resp, err = m.lease.Revoke(context.TODO(), m.leaseID) // 终止租约（去掉过期时间）, key will deleted auto.
+	resp, err = m.lease.Revoke(context.TODO(), m.leaseID) // 终止租约（去掉过期时间）, key will deleted auto. ps: 租约提前过期时该调用也不报错
 	if err == nil {
 		m.debug("Delete %v OK", m.key)
 		return nil
