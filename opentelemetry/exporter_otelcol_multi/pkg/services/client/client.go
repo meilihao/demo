@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"google.golang.org/grpc"
@@ -65,7 +65,7 @@ func getCurrentWeather(c weatherpb.WeatherServiceClient, tracer trace.Tracer) {
 	}
 
 	span.AddEvent("Response", trace.WithAttributes(
-		label.String("condition", res.Condition),
-		label.Float64("temperature", res.Temperature),
+		attribute.String("condition", res.Condition),
+		attribute.Float64("temperature", res.Temperature),
 	))
 }

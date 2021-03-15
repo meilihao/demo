@@ -14,11 +14,12 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -98,11 +99,11 @@ func initProvider() func() {
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	// set global TracerProvider (the default is noopTracerProvider).
 	otel.SetTracerProvider(tracerProvider)
-	otel.SetMeterProvider(cont.MeterProvider())
+	global.SetMeterProvider(cont.MeterProvider())
 	handleErr(cont.Start(context.Background()), "failed to start controller")
 
 	return func() {
-		// Shutdown will flush any remaining spans.
+		// Shutdown will flush any remaining spans and shut down the exporter.
 		handleErr(tracerProvider.Shutdown(ctx), "failed to shutdown TracerProvider")
 
 		// Push any last metric events to the exporter.
@@ -122,15 +123,15 @@ func main() {
 	log.Println("provider init done")
 
 	tracer := otel.Tracer("test-tracer")
-	meter := otel.Meter("test-meter")
+	meter := global.Meter("test-meter")
 
 	// labels represent additional key-value descriptors that can be bound to a
 	// metric observer or recorder.
 	// <namespace>_an_important_metric{labelA="chocolate",labelB="raspberry",labelC="vanilla"} 2
-	commonLabels := []label.KeyValue{
-		label.String("labelA", "chocolate"),
-		label.String("labelB", "raspberry"),
-		label.String("labelC", "vanilla"),
+	commonLabels := []attribute.KeyValue{
+		attribute.String("labelA", "chocolate"),
+		attribute.String("labelB", "raspberry"),
+		attribute.String("labelC", "vanilla"),
 	}
 
 	// Recorder metric example
@@ -154,12 +155,12 @@ func main() {
 		valuerecorder.Add(ctx, 1.0)
 
 		iSpan.SetStatus(codes.Error, "error")
-		iSpan.SetAttributes(label.Bool("is_done", true))
+		iSpan.SetAttributes(attribute.Bool("is_done", true))
 
 		// equal opentracing's span.LogFields
-		iSpan.AddEvent("failed", trace.WithAttributes(label.String("reason", "test")))
-		SpanLog(iCtx, iSpan, zap.DebugLevel, "debug log", label.String("reason", "test"))
-		SpanLog(iCtx, iSpan, zap.InfoLevel, "info log", label.String("reason", "test"))
+		iSpan.AddEvent("failed", trace.WithAttributes(attribute.String("reason", "test")))
+		SpanLog(iCtx, iSpan, zap.DebugLevel, "debug log", attribute.String("reason", "test"))
+		SpanLog(iCtx, iSpan, zap.InfoLevel, "info log", attribute.String("reason", "test"))
 		SpanLog(iCtx, iSpan, zap.InfoLevel, "test")
 
 		<-time.After(time.Second)
@@ -175,7 +176,7 @@ func handleErr(err error, message string) {
 	}
 }
 
-func SpanLog(ctx context.Context, span trace.Span, l zapcore.Level, msg string, kv ...label.KeyValue) {
+func SpanLog(ctx context.Context, span trace.Span, l zapcore.Level, msg string, kv ...attribute.KeyValue) {
 	var logger *zap.Logger
 	if tmp := ctx.Value(loggerKey{}); tmp == nil {
 		return
@@ -193,7 +194,7 @@ func SpanLog(ctx context.Context, span trace.Span, l zapcore.Level, msg string, 
 		if len(kv) > 0 {
 			for _, attr := range kv {
 				switch attr.Value.Type() {
-				case label.STRING:
+				case attribute.STRING:
 					fs = append(fs, zap.String(string(attr.Key), attr.Value.AsString()))
 				default:
 					fs = append(fs, zap.Any(string(attr.Key), attr.Value))
@@ -203,7 +204,7 @@ func SpanLog(ctx context.Context, span trace.Span, l zapcore.Level, msg string, 
 
 		ce.Write(fs...)
 
-		kv = append(kv, label.String("level", l.String()))
+		kv = append(kv, attribute.String("level", l.String()))
 		span.AddEvent(msg, trace.WithAttributes(kv...))
 	}
 }

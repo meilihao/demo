@@ -14,9 +14,9 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -35,7 +35,7 @@ func (s *server) GetCurrentWeather(ctx context.Context, in *weatherpb.WeatherReq
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		span.AddEvent("metadata", trace.WithAttributes(
-			label.Any("metadata", md),
+			attribute.Any("metadata", md),
 		))
 	}
 
@@ -43,14 +43,14 @@ func (s *server) GetCurrentWeather(ctx context.Context, in *weatherpb.WeatherReq
 	if !ok {
 		err := status.Error(codes.NotFound, "Location not found")
 		span.RecordError(err, trace.WithAttributes(
-			label.Any("status", codes.NotFound),
+			attribute.Any("status", codes.NotFound),
 		))
 		return nil, err
 	}
 
 	span.AddEvent("Selected condition", trace.WithAttributes(
-		label.String("condition", l),
-		label.String("location", in.Location),
+		attribute.String("condition", l),
+		attribute.String("location", in.Location),
 	))
 
 	t, err := getTemperature(ctx)
@@ -62,7 +62,7 @@ func (s *server) GetCurrentWeather(ctx context.Context, in *weatherpb.WeatherReq
 	}
 
 	span.AddEvent("Temperature received", trace.WithAttributes(
-		label.Float64("temperature", t),
+		attribute.Float64("temperature", t),
 	))
 
 	return &weatherpb.WeatherResponse{
@@ -132,7 +132,7 @@ func getTemperature(ctx context.Context) (float64, error) {
 		otelhttptrace.Inject(ctx, req)
 	} else {
 		req = req.WithContext(ctx)
-		otel.GetTextMapPropagator().Inject(ctx, req.Header)
+		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
 	}
 
 	res, err := client.Do(req)

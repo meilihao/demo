@@ -5,8 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"go.opentelemetry.io/otel/label"
-	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	itrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -44,7 +43,7 @@ func (lsp *LogSpanProcessor) OnEnd(s sdktrace.ReadOnlySpan) {
 	}
 }
 
-func exportKVs(sctx itrace.SpanContext, e exporttrace.Event) []zap.Field {
+func exportKVs(sctx itrace.SpanContext, e itrace.Event) []zap.Field {
 	ls := make([]zap.Field, 0, len(e.Attributes)+3)
 	// TODO replace default ts
 	ls = append(ls, zap.Time("time", e.Time))
@@ -54,7 +53,7 @@ func exportKVs(sctx itrace.SpanContext, e exporttrace.Event) []zap.Field {
 	for _, attr := range e.Attributes {
 		// TODO add others type
 		switch attr.Value.Type() {
-		case label.STRING:
+		case attribute.STRING:
 			ls = append(ls, zap.String(string(attr.Key), attr.Value.AsString()))
 		default:
 			ls = append(ls, zap.Any(string(attr.Key), attr.Value))

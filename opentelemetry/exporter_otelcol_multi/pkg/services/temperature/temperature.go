@@ -7,7 +7,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/gin-gonic/gin"
@@ -18,13 +18,13 @@ func Temperature(c *gin.Context) {
 	defer span.End()
 
 	span.AddEvent("header", trace.WithAttributes(
-		label.Any("data", c.Request.Header),
+		attribute.Any("data", c.Request.Header),
 	))
 
 	tmp := 1.0
 
 	span.AddEvent("Response", trace.WithAttributes(
-		label.Float64("return temperature", tmp),
+		attribute.Float64("return temperature", tmp),
 	))
 
 	c.JSON(200, gin.H{

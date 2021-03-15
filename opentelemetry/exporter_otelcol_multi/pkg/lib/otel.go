@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -79,7 +80,7 @@ func InitOTEL(endpoint, serviceName string) (func(), error) {
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	// set global TracerProvider (the default is noopTracerProvider).
 	otel.SetTracerProvider(tracerProvider)
-	otel.SetMeterProvider(cont.MeterProvider())
+	global.SetMeterProvider(cont.MeterProvider())
 	if err = cont.Start(context.Background()); err != nil {
 		return nil, errors.Wrap(err, "failed to start controller")
 	}
