@@ -189,9 +189,14 @@ func SpanLog(ctx context.Context, span trace.Span, l zapcore.Level, msg string, 
 	if ce := logger.Check(l, msg); ce != nil {
 		sctx := span.SpanContext()
 
-		fs := make([]zap.Field, 0, len(kv)+2)
-		fs = append(fs, zap.String("trace_id", sctx.TraceID.String()))
-		fs = append(fs, zap.String("span_id", sctx.SpanID.String()))
+		var fs []zap.Field
+		if sctx.IsValid() {
+			fs = make([]zap.Field, 0, len(kv)+2)
+			fs = append(fs, zap.String("trace_id", sctx.TraceID.String()))
+			fs = append(fs, zap.String("span_id", sctx.SpanID.String()))
+		} else {
+			fs = make([]zap.Field, 0, len(kv))
+		}
 
 		if len(kv) > 0 {
 			for _, attr := range kv {
