@@ -179,6 +179,8 @@ func handleErr(err error, message string) {
 func SpanLog(ctx context.Context, span trace.Span, l zapcore.Level, msg string, kv ...attribute.KeyValue) {
 	var logger *zap.Logger
 	if tmp := ctx.Value(loggerKey{}); tmp == nil {
+		span.AddEvent(msg, trace.WithAttributes(kv...))
+
 		return
 	} else {
 		logger = tmp.(*zap.Logger)
