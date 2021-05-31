@@ -70,7 +70,7 @@ func recoverFile() error {
 	}
 
 	// 数据分10片和校验3片
-	enc, err := reedsolomon.New(dataShards, parityShards)
+	enc, err := reedsolomon.New(dataShards, parityShards, reedsolomon.WithAutoGoroutines(dataShards+parityShards))
 	if err != nil {
 		return fmt.Errorf("创建数据分片和校验分片失败,%s", err.Error())
 	}
@@ -123,7 +123,7 @@ func recoverFile() error {
 // 分隔文件处理
 func splitFile() error {
 	// 数据分10片和校验3片
-	enc, err := reedsolomon.New(dataShards, parityShards)
+	enc, err := reedsolomon.New(dataShards, parityShards, reedsolomon.WithAutoGoroutines(dataShards+parityShards))
 	if err != nil {
 		return fmt.Errorf("创建数据分片和校验分片失败,%s", err.Error())
 	}
