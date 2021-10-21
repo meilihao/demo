@@ -3,7 +3,7 @@ module distributed-tracing-otel
 go 1.15
 
 require (
-	github.com/gin-gonic/gin v1.6.3
+	github.com/gin-gonic/gin v1.7.0
 	github.com/golang/protobuf v1.4.3
 	github.com/pkg/errors v0.9.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.18.0
