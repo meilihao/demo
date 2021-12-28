@@ -18,7 +18,7 @@ func Temperature(c *gin.Context) {
 	defer span.End()
 
 	span.AddEvent("header", trace.WithAttributes(
-		attribute.Any("data", c.Request.Header),
+		attribute.String("data", string(lib.DumpToJson(c.Request.Header))),
 	))
 
 	tmp := 1.0
@@ -37,7 +37,7 @@ var (
 )
 
 func main() {
-	shutdownFn, err := lib.InitOTEL("openhello.net:55680", "temperature")
+	shutdownFn, err := lib.InitOTEL("openhello.net:4317", "temperature")
 	if err != nil {
 		log.Fatal(err)
 	}

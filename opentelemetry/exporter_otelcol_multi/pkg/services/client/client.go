@@ -12,8 +12,9 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -21,7 +22,7 @@ import (
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	shutdownFn, err := lib.InitOTEL("openhello.net:55680", "client")
+	shutdownFn, err := lib.InitOTEL("openhello.net:4317", "client")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,8 +45,27 @@ func main() {
 }
 
 func getCurrentWeather(c weatherpb.WeatherServiceClient, tracer trace.Tracer) {
-	ctx, span := tracer.Start(context.Background(), "GetCurrentWeather")
+	// labels represent additional key-value descriptors that can be bound to a
+	// metric observer or recorder.
+	// <namespace>_an_important_metric{labelA="chocolate",labelB="raspberry",labelC="vanilla"} 2
+	commonLabels := []attribute.KeyValue{
+		attribute.String("labelA", "chocolate"),
+		attribute.String("labelB", "raspberry"),
+		attribute.String("labelC", "vanilla"),
+	}
+
+	ctx, span := tracer.Start(context.Background(), "GetCurrentWeather", trace.WithAttributes(commonLabels...))
 	defer span.End()
+
+	meter := global.Meter("test-meter")
+
+	// Recorder metric example
+	counter := metric.Must(meter).
+		NewInt64Counter(
+			"an_important_metric",
+			metric.WithDescription("Measures the cumulative epicness of the app"),
+		)
+	counter.Add(ctx, 1, commonLabels...)
 
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),

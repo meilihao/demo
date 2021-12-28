@@ -35,7 +35,7 @@ func (s *server) GetCurrentWeather(ctx context.Context, in *weatherpb.WeatherReq
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		span.AddEvent("metadata", trace.WithAttributes(
-			attribute.Any("metadata", md),
+			attribute.String("metadata", string(lib.DumpToJson(md))),
 		))
 	}
 
@@ -43,7 +43,7 @@ func (s *server) GetCurrentWeather(ctx context.Context, in *weatherpb.WeatherReq
 	if !ok {
 		err := status.Error(codes.NotFound, "Location not found")
 		span.RecordError(err, trace.WithAttributes(
-			attribute.Any("status", codes.NotFound),
+			attribute.String("status", codes.NotFound.String()),
 		))
 		return nil, err
 	}
@@ -76,7 +76,7 @@ var (
 )
 
 func main() {
-	shutdownFn, err := lib.InitOTEL("openhello.net:55680", "weather")
+	shutdownFn, err := lib.InitOTEL("openhello.net:4317", "weather")
 	if err != nil {
 		log.Fatal(err)
 	}

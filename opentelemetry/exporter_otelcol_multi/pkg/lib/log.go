@@ -43,12 +43,12 @@ func (lsp *LogSpanProcessor) OnEnd(s sdktrace.ReadOnlySpan) {
 	}
 }
 
-func exportKVs(sctx itrace.SpanContext, e itrace.Event) []zap.Field {
+func exportKVs(sctx itrace.SpanContext, e sdktrace.Event) []zap.Field {
 	ls := make([]zap.Field, 0, len(e.Attributes)+3)
 	// TODO replace default ts
 	ls = append(ls, zap.Time("time", e.Time))
-	ls = append(ls, zap.String("trace_id", sctx.TraceID.String()))
-	ls = append(ls, zap.String("span_id", sctx.SpanID.String()))
+	ls = append(ls, zap.String("trace_id", sctx.TraceID().String()))
+	ls = append(ls, zap.String("span_id", sctx.SpanID().String()))
 
 	for _, attr := range e.Attributes {
 		// TODO add others type
@@ -76,5 +76,6 @@ func (lsp *LogSpanProcessor) Shutdown(ctx context.Context) error {
 }
 
 // ForceFlush exports all ended spans that have not yet been exported.
-func (lsp *LogSpanProcessor) ForceFlush() {
+func (lsp *LogSpanProcessor) ForceFlush(ctx context.Context) error {
+	return nil
 }
