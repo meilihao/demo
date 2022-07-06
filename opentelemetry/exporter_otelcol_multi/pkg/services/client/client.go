@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -59,12 +59,15 @@ func getCurrentWeather(c weatherpb.WeatherServiceClient, tracer trace.Tracer) {
 
 	meter := global.Meter("test-meter")
 
-	// Recorder metric example
-	counter := metric.Must(meter).
-		NewInt64Counter(
-			"an_important_metric",
-			metric.WithDescription("Measures the cumulative epicness of the app"),
-		)
+	// [Recorder metric example](https://github.com/open-telemetry/opentelemetry-go/blob/main/exporters/otlp/otlpmetric/otlpmetricgrpc/example_test.go)
+	// https://github.com/open-telemetry/opentelemetry-go/commit/18f4cb85ece82b12cb9bd9af02efe2a47bd8f76e#diff-b7218827137f85fefcc33f601aaf7b13a3ae201fbfd8d5ef75e821361717874e : metric.Must(meter).NewFloat64Counter() -> meter.SyncFloat64().Counter()
+	counter, err := meter.SyncInt64().Counter(
+		"an_important_metric",
+		instrument.WithDescription("Measures the cumulative epicness of the app"),
+	)
+	if err != nil {
+		log.Fatalf("Failed to create the instrument: %v", err)
+	}
 	counter.Add(ctx, 1, commonLabels...)
 
 	md := metadata.Pairs(
