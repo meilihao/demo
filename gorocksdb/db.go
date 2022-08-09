@@ -2,10 +2,10 @@
 package main
 
 import (
-	"errors"
-	"log"
-	"fmt"
 	"bytes"
+	"errors"
+	"fmt"
+	"log"
 
 	gorocksdb "github.com/tecbot/gorocksdb"
 	//"strconv"
@@ -16,7 +16,7 @@ const (
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags|log.Llongfile)
+	log.SetFlags(log.LstdFlags | log.Llongfile)
 
 	db, err := OpenDB()
 	if err != nil {
@@ -37,7 +37,6 @@ func main() {
 	err = db.Put(writeOptions, []byte("cf-1"), []byte(""))
 	log.Println(err)
 
-
 	log.Println("--- key exist")
 	raw, err := db.Get(readOptions, []byte("cf-0")) // raw.Exists() is true when value =nil
 	log.Println(raw, raw.Exists(), err)
@@ -51,13 +50,13 @@ func main() {
 	log.Println("--- Get/Put")
 	for i := 0; i < 20; i += 1 {
 		var keyStr string
-		
-		if i&1==0{
+
+		if i&1 == 0 {
 			keyStr = "t2-"
-		}else{
+		} else {
 			keyStr = "t1-"
 		}
-		keyStr+=fmt.Sprintf("%03d",i)
+		keyStr += fmt.Sprintf("%03d", i)
 
 		var key []byte = []byte(keyStr)
 		db.Put(writeOptions, key, key)
@@ -79,17 +78,17 @@ func main() {
 
 	it.Seek([]byte("t1-"))
 
-	endKey:=[]byte("t1-015")
+	endKey := []byte("t1-015")
 	for ; it.Valid(); it.Next() {
 		key := it.Key()
 		value := it.Value()
 
-		if bytes.Compare(key.Data(), endKey)>0{
-		        log.Println("end key")
+		if bytes.Compare(key.Data(), endKey) > 0 {
+			log.Println("end key")
 
-		        key.Free()
-				value.Free()
-		        break
+			key.Free()
+			value.Free()
+			break
 		}
 
 		log.Printf("Key: %v Value: %v\n", string(key.Data()), string(value.Data()))
@@ -103,8 +102,10 @@ func main() {
 
 	log.Println("--- SeekToFirst")
 	readOptions.SetPrefixSameAsStart(false) // 设为false, 否则NewIterator只输出与获取到的第一个key相同key prefix的kv
-	it= db.NewIterator(readOptions)
+	it = db.NewIterator(readOptions)
 	defer it.Close()
+
+	// **注意:**使用SeekToFirst前先执行db.Flush()否则可能读不到刚写入的数据. 或使用Seek()代替SeekToFirst
 
 	for it.SeekToFirst(); it.Valid(); it.Next() {
 		key := it.Key()
@@ -141,7 +142,7 @@ func main() {
 	defer it.Close()
 
 	it.SeekForPrev([]byte("t1-030"))
-	if !it.Valid(){ // not found
+	if !it.Valid() { // not found
 		it.SeekToLast()
 	}
 
@@ -160,9 +161,8 @@ func main() {
 		log.Println(err)
 	}
 
-
 	log.Println("--- range delete")
-	it= db.NewIterator(readOptions)
+	it = db.NewIterator(readOptions)
 	defer it.Close()
 
 	for it.SeekToFirst(); it.Valid(); it.Next() {
@@ -177,13 +177,13 @@ func main() {
 	wb := gorocksdb.NewWriteBatch()
 	defer wb.Destroy()
 
-	dStartKey:=[]byte("t2-005")
-	dEndKey:=[]byte("t2-010")
+	dStartKey := []byte("t2-005")
+	dEndKey := []byte("t2-010")
 	wb.DeleteRange(dStartKey, dEndKey)
 
 	db.Write(writeOptions, wb)
 
-	it= db.NewIterator(readOptions)
+	it = db.NewIterator(readOptions)
 	defer it.Close()
 
 	for it.SeekToFirst(); it.Valid(); it.Next() {
@@ -244,12 +244,12 @@ func OpenDB() (*gorocksdb.DB, error) {
 	} else {
 		log.Println("OPEN DB success", db)
 	}
-	
-	go func(){
+
+	go func() {
 		for {
-			s:=options.GetStatisticsString()
+			s := options.GetStatisticsString()
 			fmt.Println(s)
-		
+
 			time.Sleep(60 * time.Second)
 		}
 	}()
