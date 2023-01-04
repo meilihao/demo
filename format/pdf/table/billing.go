@@ -25,6 +25,13 @@ func main() {
 	m := pdf.NewMaroto(consts.Portrait, consts.A4)
 	m.SetPageMargins(10, 15, 10)
 
+	// 支持中文字体 [NotoSansSC-Regular.ttf](https://github.com/jsntn/webfonts/blob/master/NotoSansSC-Regular.ttf)
+	m.AddUTF8Font("NotoSansSC", consts.Normal, "NotoSansSC-Regular.ttf")
+	m.AddUTF8Font("NotoSansSC", consts.Italic, "NotoSansSC-Regular.ttf")
+	m.AddUTF8Font("NotoSansSC", consts.Bold, "NotoSansSC-Regular.ttf")
+	m.AddUTF8Font("NotoSansSC", consts.BoldItalic, "NotoSansSC-Regular.ttf")
+	m.SetDefaultFontFamily("NotoSansSC")
+
 	m.RegisterHeader(func() {
 		m.Row(20, func() {
 			m.Col(3, func() {

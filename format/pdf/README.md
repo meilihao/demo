@@ -3,3 +3,5 @@
 
 ## example
 - [table](https://github.com/johnfercher/maroto/tree/master/internal/examples/billing)
+
+    支持中文
