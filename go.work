@@ -1,4 +1,5 @@
-go 1.21rc3
+go 1.21
 
 use ./crypto/tls
 use ./rocksdb/grocksdb
+use ./opentelemetry/gorm
