@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	//slog "log"
 	"os"
 	"os/signal"
@@ -17,9 +18,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
+
+	//"gorm.io/plugin/opentelemetry/logging/logrus"
 	"moul.io/zapgorm2"
 )
 
@@ -72,15 +74,28 @@ func main() {
 			return fields
 		}
 
+		// only can get parent span id
 		spanCtx := span.SpanContext()
 		fields = append(fields, zap.String("trace_id", spanCtx.TraceID().String()),
-			zap.String("span_id", spanCtx.SpanID().String()),
+			zap.String("parent_span_id", spanCtx.SpanID().String()),
 		)
 
 		return fields
 	}
 	newLogger.SetAsDefault()
 
+	//_ = newLogger
+	//
+	// logger := logger.New( // no trace info
+	// 	logrus.NewWriter(),
+	// 	logger.Config{
+	// 		SlowThreshold: time.Millisecond,
+	// 		LogLevel:      logger.Warn,
+	// 		Colorful:      false,
+	// 	},
+	// )
+
+	// Logger执行入口见: gorm@v1.25.5/callbacks.go#`(p *processor) Execute(db *DB) *DB`
 	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
@@ -92,6 +107,8 @@ func main() {
 		panic("failed to connect database")
 	}
 
+	// like offical tracing: https://github.com/go-gorm/opentelemetry
+	// otelgorm.NewPlugin 是 gorm Hook, 在callback里执行, 即在db.Logger.Trace之前执行
 	if err := db.Use(otelgorm.NewPlugin()); err != nil { // 生成新span并发送到了otelcol-contrib
 		panic(err)
 	}
@@ -101,22 +118,23 @@ func main() {
 		otelzap.WithMinLevel(zap.DebugLevel),
 	)
 
+	zlog.Ctx(ctx).Info("before sql")
 	// db.AutoMigrate(&Product{})
 
 	// p1 := &Product{Code: "D1", Price: 100, Author: Author{
 	// 	Name: "chen",
 	// }}
 	// if err = db.Create(p1).Error; err != nil {
-	// 	log.Println(err)
+	// 	panic(err)
 	// }
 
 	// p2 := &Product{Code: "D2", Price: 100}
 	// if err = db.Create(p2).Error; err != nil {
-	// 	log.Println(err)
+	// 	panic(err)
 	// }
 	ls := []*Product{}
 	if err = db.Debug().WithContext(ctx).Find(&ls).Error; err != nil {
 		panic(err)
 	}
-	zlog.Ctx(ctx).Info("hello from zap", zap.Any("ls", ls))
+	zlog.Ctx(ctx).Info("sql products", zap.Any("ls", ls))
 }

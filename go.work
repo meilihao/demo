@@ -1,5 +1,9 @@
-go 1.21
+go 1.21rc3
+
+toolchain go1.21.2
 
 use ./crypto/tls
+
 use ./rocksdb/grocksdb
+
 use ./opentelemetry/gorm

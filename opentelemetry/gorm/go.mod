@@ -1,6 +1,6 @@
 module t
 
-go 1.19
+go 1.21
 
 replace github.com/meilihao/golib/v2 => /home/chen/git/golib
 
@@ -28,6 +28,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/sirupsen/logrus v1.9.2 // indirect
 	github.com/uptrace/opentelemetry-go-extra/otelsql v0.2.3 // indirect
 	github.com/uptrace/opentelemetry-go-extra/otelutil v0.2.3 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.42.0 // indirect
@@ -48,5 +49,6 @@ require (
 	google.golang.org/grpc v1.58.2 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
+	gorm.io/plugin/opentelemetry v0.1.4 // indirect
 	moul.io/zapgorm2 v1.3.0 // indirect
 )
