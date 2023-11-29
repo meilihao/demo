@@ -7,3 +7,4 @@ use ./crypto/tls
 use ./rocksdb/grocksdb
 
 use ./opentelemetry/gorm
+use ovirt
