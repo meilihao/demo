@@ -1,10 +1,12 @@
-go 1.21rc3
-
-toolchain go1.21.2
+go 1.21.3
 
 use ./crypto/tls
 
 use ./rocksdb/grocksdb
 
 use ./opentelemetry/gorm
-use ovirt
+
+use (
+	./limiter/rate
+	ovirt
+)
