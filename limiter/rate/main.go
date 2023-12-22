@@ -46,9 +46,14 @@ func Wait(limiter *rate.Limiter, n, N int) {
 func Reserve(limiter *rate.Limiter, n, N int) {
 	fmt.Println("r", limiter.Tokens())
 	r := limiter.ReserveN(time.Now(), N) // 不能使用r.OK(), 因为它仅表示是否拿到了token, 不能所拿token是否足够
-	if r.Delay() != 0 {
-		fmt.Printf("wait %02d %v\n", n, time.Now())
-		time.Sleep(r.Delay())
+	if r.OK() {
+		if r.Delay() != 0 {
+			fmt.Printf("wait %02d %v\n", n, time.Now())
+			time.Sleep(r.Delay())
+		}
+	} else { // 避免没有取到token时返回rate.InfDuration
+		fmt.Printf("wait %02d %v with no token\n", n, time.Now())
+		time.Sleep(time.Second)
 	}
 
 	fmt.Println("-", limiter.Tokens())
