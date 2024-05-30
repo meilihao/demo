@@ -18,6 +18,10 @@ var (
 	gitPath string
 )
 
+const (
+	repoSuffix = ".git"
+)
+
 func init() {
 	flag.StringVar(&gitPath, "d", "", "git repo")
 }
@@ -25,7 +29,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	fp := filepath.Join(gitPath, ".git")
+	fp := filepath.Join(gitPath, repoSuffix)
 
 	_, err := os.Stat(fp)
 	CheckIfError(err)
@@ -76,7 +80,7 @@ func main() {
 		CheckIfError(err)
 		f.SetSheetRow("Sheet1", cell, &row)
 	}
-	err = f.SaveAs("git.xlsx")
+	err = f.SaveAs(fmt.Sprintf("%s.xlsx", filepath.Base(gitPath)))
 	CheckIfError(err)
 }
 
