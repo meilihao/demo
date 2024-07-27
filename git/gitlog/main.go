@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -12,8 +14,27 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
+var (
+	gitPath string
+)
+
+const (
+	repoSuffix = ".git"
+)
+
+func init() {
+	flag.StringVar(&gitPath, "d", "", "git repo")
+}
+
 func main() {
-	r, err := git.PlainOpen("/home/chen/git/tour_book/.git")
+	flag.Parse()
+
+	fp := filepath.Join(gitPath, repoSuffix)
+
+	_, err := os.Stat(fp)
+	CheckIfError(err)
+
+	r, err := git.PlainOpen(fp)
 	CheckIfError(err)
 
 	ref, err := r.Head()
@@ -59,7 +80,7 @@ func main() {
 		CheckIfError(err)
 		f.SetSheetRow("Sheet1", cell, &row)
 	}
-	err = f.SaveAs("git.xlsx")
+	err = f.SaveAs(fmt.Sprintf("%s.xlsx", filepath.Base(gitPath)))
 	CheckIfError(err)
 }
 
