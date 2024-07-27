@@ -108,6 +108,8 @@ ref:
     $ mkbundle -f server-bundle.pem ca.pem server.pem  # mkbundle：将证书链和私钥打包成一个文件
     ```
 
+    > **`hosts`不用包含端口**
+
     分开生成key和pem:
     ```bash
     $ cfssl genkey server-csr.json  |cfssljson -bare server
