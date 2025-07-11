@@ -105,7 +105,7 @@ ref:
     }
     $ cfssl gencert -ca=ca.pem -ca-key=ca-key.pem --config=config.json -profile=www server-csr.json | cfssljson -bare server
     $ cfssl-certinfo -cert server.pem
-    $ mkbundle -f server-bundle.pem ca.pem server.pem  # mkbundle：将证书链和私钥打包成一个文件
+    $ mkbundle -f server-bundle.pem server.pem ca.pem  # mkbundle：将证书链和私钥打包成一个文件
     ```
 
     > **`hosts`不用包含端口**
@@ -117,3 +117,5 @@ ref:
     ```
 
     server-bundle.pem和server-key.pem即nginx使用的证书及其私钥.
+
+    > openssl x509 -in cert.pem -out cert.crt -outform DER: pem转crt
