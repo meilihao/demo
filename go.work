@@ -8,3 +8,4 @@ use (
 	./limiter/rate
 	ovirt
 )
+use net/tcp/split_pkg
