@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Server Sent Event</title>
+</head>
+
+<body>
+<div class="event-data" id="data"></div>
+</body>
+
+<script>
+    // EventSource object of javascript listens the streaming events from our go server and prints the message.
+    var stream = new EventSource("/sse?account=1&id="+Math.random());
+
+    stream.onopen = function (event) {
+        console.log(event);
+    };
+    stream.onmessage = function (event) {
+        console.log(JSON.parse(event.data));
+        document.getElementById("data").innerText = event.data;
+    };
+    stream.onerror = function (event) {
+        console.log(event);
+        stream.close();
+    };
+</script>
+
+</html>
