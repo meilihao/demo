@@ -100,6 +100,13 @@ func (m *Manager[T, X]) Run() {
 	}
 }
 
+// Data to be broadcasted to a client.
+type Data[X comparable] struct {
+	Message string `json:"message"`
+	From    X      `json:"sender"`
+	To      X      `json:"receiver"`
+}
+
 func handleSSE(manager *Manager[string, int]) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Set SSE headers
@@ -131,6 +138,7 @@ func handleSSE(manager *Manager[string, int]) gin.HandlerFunc {
 		}()
 
 		// Flush the headers to establish the SSE connection
+		fmt.Fprintf(c.Writer, "data: %s\n\n", fmt.Sprintf(`{"event": "time", "data":"%s"}`, time.Now().Format(time.DateTime)))
 		c.Writer.Flush()
 
 		// Listen for the connection to close
@@ -170,13 +178,6 @@ func handleSSE(manager *Manager[string, int]) gin.HandlerFunc {
 			}
 		}
 	}
-}
-
-// Data to be broadcasted to a client.
-type Data[X comparable] struct {
-	Message string `json:"message"`
-	From    X      `json:"sender"`
-	To      X      `json:"receiver"`
 }
 
 func main() {

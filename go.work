@@ -1,11 +1,20 @@
-go 1.22.3
+go 1.25.1
 
 use ./crypto/tls
+
 use ./git/gitlog
+
 use ./rocksdb/grocksdb
+
 use ./opentelemetry/gorm
+
 use (
 	./limiter/rate
 	ovirt
 )
-use net/tcp/split_pkg
+
+use (
+	./format/xlsx
+	./http/sse
+	net/tcp/split_pkg
+)
