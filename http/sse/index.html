@@ -12,7 +12,7 @@
 
 <script>
     // EventSource object of javascript listens the streaming events from our go server and prints the message.
-    var stream = new EventSource("/sse?account=1&id="+Math.random());
+    var stream = new EventSource("/sse?account=1");
 
     stream.onopen = function (event) {
         console.log(event);

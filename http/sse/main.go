@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 type Client[T, X comparable] struct {
@@ -109,6 +110,12 @@ type Data[X comparable] struct {
 
 func handleSSE(manager *Manager[string, int]) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		clientId, err := gonanoid.New()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "client id generate failed"})
+			return
+		}
+
 		// Set SSE headers
 		c.Writer.Header().Set("Content-Type", "text/event-stream")
 		c.Writer.Header().Set("Cache-Control", "no-cache")
@@ -119,7 +126,7 @@ func handleSSE(manager *Manager[string, int]) gin.HandlerFunc {
 		account, _ := strconv.Atoi(accountStr)
 
 		client := &Client[string, int]{
-			Id:      c.Query("id"),
+			Id:      clientId,
 			Account: account,
 			Channel: make(chan *Data[int], 8),
 		}
