@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 
-	"distributed-tracing-otel/pkg/lib"
 	"distributed-tracing-otel/pkg/weatherpb"
 
+	"github.com/meilihao/golib/v2"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel"
@@ -35,7 +38,7 @@ func (s *server) GetCurrentWeather(ctx context.Context, in *weatherpb.WeatherReq
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		span.AddEvent("metadata", trace.WithAttributes(
-			attribute.String("metadata", string(lib.DumpToJson(md))),
+			attribute.String("metadata", golib.DumpToJsonString(md)),
 		))
 	}
 
@@ -72,15 +75,25 @@ func (s *server) GetCurrentWeather(ctx context.Context, in *weatherpb.WeatherReq
 }
 
 var (
-	tracer trace.Tracer
+	otelEndpoint string
+	tracer       trace.Tracer
 )
 
+func init() {
+	flag.StringVar(&otelEndpoint, "otel_endpoint", "localhost:4317", "otel endpoint")
+}
+
 func main() {
-	shutdownFn, err := lib.InitOTEL("openhello.net:4317", "weather")
+	flag.Parse()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	shutdownFn, err := golib.SetupOTelSDK(ctx, otelEndpoint, "weather")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer shutdownFn()
+	defer shutdownFn(ctx)
 
 	tracer = otel.Tracer("weather-tracer")
 

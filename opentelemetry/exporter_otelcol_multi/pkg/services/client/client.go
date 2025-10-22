@@ -3,34 +3,53 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
+	"os"
+	"os/signal"
 	"time"
 
-	"distributed-tracing-otel/pkg/lib"
 	"distributed-tracing-otel/pkg/weatherpb"
 
+	"github.com/meilihao/golib/v2"
+
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
+var (
+	otelEndpoint string
+)
+
+func init() {
+	flag.StringVar(&otelEndpoint, "otel_endpoint", "localhost:4317", "otel endpoint")
+}
+
 func main() {
+	flag.Parse()
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	shutdownFn, err := lib.InitOTEL("openhello.net:4317", "client")
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	shutdownFn, err := golib.SetupOTelSDK(ctx, otelEndpoint, "client")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer shutdownFn()
+	defer shutdownFn(ctx)
 
 	tracer := otel.Tracer("client")
 
-	cc, err := grpc.Dial("localhost:50051", grpc.WithInsecure(),
+	cc, err := grpc.NewClient("localhost:50051",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()), // 在将请求发送到gRPC服务器之前，此拦截器会将span信息添加到上下文中
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	)
@@ -57,18 +76,17 @@ func getCurrentWeather(c weatherpb.WeatherServiceClient, tracer trace.Tracer) {
 	ctx, span := tracer.Start(context.Background(), "GetCurrentWeather", trace.WithAttributes(commonLabels...))
 	defer span.End()
 
-	meter := global.Meter("test-meter")
+	meter := otel.Meter("test-meter")
 
-	// [Recorder metric example](https://github.com/open-telemetry/opentelemetry-go/blob/main/exporters/otlp/otlpmetric/otlpmetricgrpc/example_test.go)
-	// https://github.com/open-telemetry/opentelemetry-go/commit/18f4cb85ece82b12cb9bd9af02efe2a47bd8f76e#diff-b7218827137f85fefcc33f601aaf7b13a3ae201fbfd8d5ef75e821361717874e : metric.Must(meter).NewFloat64Counter() -> meter.SyncFloat64().Counter()
-	counter, err := meter.SyncInt64().Counter(
+	// https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/examples/otel-collector/main.go
+	counter, err := meter.Int64Counter(
 		"an_important_metric",
-		instrument.WithDescription("Measures the cumulative epicness of the app"),
+		metric.WithDescription("Measures the cumulative epicness of the app"),
 	)
 	if err != nil {
 		log.Fatalf("Failed to create the instrument: %v", err)
 	}
-	counter.Add(ctx, 1, commonLabels...)
+	counter.Add(ctx, 1, metric.WithAttributes(commonLabels...))
 
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
@@ -77,15 +95,19 @@ func getCurrentWeather(c weatherpb.WeatherServiceClient, tracer trace.Tracer) {
 	)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
+	logger := otelslog.NewLogger("client")
+
 	req := &weatherpb.WeatherRequest{
 		Location: "dublin",
 	}
 
 	res, err := c.GetCurrentWeather(ctx, req)
 	if err != nil {
+		logger.ErrorContext(ctx, "GetCurrentWeather", "err", err)
 		span.RecordError(err)
 		return
 	}
+	logger.InfoContext(ctx, "GetCurrentWeather", "result", res)
 
 	span.AddEvent("Response", trace.WithAttributes(
 		attribute.String("condition", res.Condition),

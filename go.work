@@ -16,5 +16,6 @@ use (
 use (
 	./format/xlsx
 	./http/sse
+	./opentelemetry/exporter_otelcol_multi
 	net/tcp/split_pkg
 )

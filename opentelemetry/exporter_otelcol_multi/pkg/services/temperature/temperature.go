@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"log"
-
-	"distributed-tracing-otel/pkg/lib"
+	"os"
+	"os/signal"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
@@ -11,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/gin-gonic/gin"
+	"github.com/meilihao/golib/v2"
 )
 
 func Temperature(c *gin.Context) {
@@ -18,7 +21,7 @@ func Temperature(c *gin.Context) {
 	defer span.End()
 
 	span.AddEvent("header", trace.WithAttributes(
-		attribute.String("data", string(lib.DumpToJson(c.Request.Header))),
+		attribute.String("data", golib.DumpToJsonString(c.Request.Header)),
 	))
 
 	tmp := 1.0
@@ -33,15 +36,25 @@ func Temperature(c *gin.Context) {
 }
 
 var (
-	tracer trace.Tracer
+	otelEndpoint string
+	tracer       trace.Tracer
 )
 
+func init() {
+	flag.StringVar(&otelEndpoint, "otel_endpoint", "localhost:4317", "otel endpoint")
+}
+
 func main() {
-	shutdownFn, err := lib.InitOTEL("openhello.net:4317", "temperature")
+	flag.Parse()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	shutdownFn, err := golib.SetupOTelSDK(ctx, otelEndpoint, "temperature")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer shutdownFn()
+	defer shutdownFn(ctx)
 
 	tracer = otel.Tracer("temperature-tracer")
 
