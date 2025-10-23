@@ -4,8 +4,9 @@ import (
 	"context"
 	"flag"
 	"log"
-	"os"
 	"os/signal"
+	"syscall"
+	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
@@ -47,7 +48,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	shutdownFn, err := golib.SetupOTelSDK(ctx, otelEndpoint, "temperature")
@@ -62,5 +63,20 @@ func main() {
 	router.Use(otelgin.Middleware("gin-middleware"))
 	router.GET("/WeatherForecast", Temperature)
 
+	go everLoop(ctx)
 	router.Run(":5000")
+}
+
+func everLoop(ctx context.Context) {
+LOOP:
+	for {
+		select {
+		case <-ctx.Done():
+			// 收到信号退出无限循环
+			break LOOP
+		default:
+			// 用一个 sleep 模拟业务逻辑
+			time.Sleep(time.Second * 10)
+		}
+	}
 }

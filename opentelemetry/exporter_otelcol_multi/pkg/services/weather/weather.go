@@ -8,8 +8,9 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"os/signal"
+	"syscall"
+	"time"
 
 	"distributed-tracing-otel/pkg/weatherpb"
 
@@ -86,7 +87,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	shutdownFn, err := golib.SetupOTelSDK(ctx, otelEndpoint, "weather")
@@ -117,8 +118,27 @@ func main() {
 
 	weatherpb.RegisterWeatherServiceServer(s, server)
 
+	go everLoop(ctx, s)
 	if err = s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
+	}
+
+	log.Println("app exit")
+}
+
+func everLoop(ctx context.Context, s *grpc.Server) {
+LOOP:
+	for {
+		select {
+		case <-ctx.Done():
+			// 收到信号退出无限循环
+			log.Println("everLoop: 收到信号退出无限循环")
+			s.Stop()
+			break LOOP
+		default:
+			// 用一个 sleep 模拟业务逻辑
+			time.Sleep(time.Second * 10)
+		}
 	}
 }
 

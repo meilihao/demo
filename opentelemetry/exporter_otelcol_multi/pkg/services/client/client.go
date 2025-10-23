@@ -5,8 +5,8 @@ import (
 	"context"
 	"flag"
 	"log"
-	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"distributed-tracing-otel/pkg/weatherpb"
@@ -37,7 +37,7 @@ func main() {
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	shutdownFn, err := golib.SetupOTelSDK(ctx, otelEndpoint, "client")

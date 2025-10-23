@@ -1,5 +1,5 @@
 // [opentelemetry-go api status](https://opentelemetry.io/docs/go/) : go sdk未实现log api, 自己动手
-package main
+package lib
 
 import (
 	"context"
@@ -43,12 +43,12 @@ func (lsp *LogSpanProcessor) OnEnd(s sdktrace.ReadOnlySpan) {
 	}
 }
 
-func exportKVs(sctx itrace.SpanContext, e itrace.Event) []zap.Field {
+func exportKVs(sctx itrace.SpanContext, e sdktrace.Event) []zap.Field {
 	ls := make([]zap.Field, 0, len(e.Attributes)+3)
 	// TODO replace default ts
 	ls = append(ls, zap.Time("time", e.Time))
-	ls = append(ls, zap.String("trace_id", sctx.TraceID.String()))
-	ls = append(ls, zap.String("span_id", sctx.SpanID.String()))
+	ls = append(ls, zap.String("trace_id", sctx.TraceID().String()))
+	ls = append(ls, zap.String("span_id", sctx.SpanID().String()))
 
 	for _, attr := range e.Attributes {
 		// TODO add others type
@@ -71,9 +71,11 @@ func (lsp *LogSpanProcessor) Shutdown(ctx context.Context) error {
 		// [Sync on linux: /dev/stdout: invalid argument](https://github.com/uber-go/zap/issues/772) is the console driver does not support fsync, hence the errors.
 		_ = lsp.logger.Sync()
 	})
+
 	return err
 }
 
 // ForceFlush exports all ended spans that have not yet been exported.
-func (lsp *LogSpanProcessor) ForceFlush() {
+func (lsp *LogSpanProcessor) ForceFlush(ctx context.Context) error {
+	return nil
 }
